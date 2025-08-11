@@ -112,7 +112,7 @@ To run unit & feature tests on the backend:
 ```bash
 cd simple-blog-api
 php artisan test
+```
 ## 👤 Author
-
 * Name: **Abdi Setiawan**
 * Email: [bedikadiryt@gmail.com](mailto:bedikadiryt@gmail.com)
