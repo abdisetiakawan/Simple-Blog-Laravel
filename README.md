@@ -1,11 +1,12 @@
 # 📄 Simple Blog Website – Laravel Backend
 
-Proyek ini adalah **backend API** untuk aplikasi blog sederhana, dibangun menggunakan **Laravel**.  
+Proyek ini adalah **backend API** untuk aplikasi blog sederhana, dibangun menggunakan **Laravel**.
 Fitur utama mencakup **Back Office (Admin Panel)** untuk manajemen postingan blog dan **Public API** untuk diakses oleh frontend (web/mobile).
 
 ---
 
-## 🚀 Features
+## 🚀 Fitur
+
 - **Admin Authentication** (login dengan email & password).
 - **CRUD Post** dengan:
   - WYSIWYG Editor untuk konten.
@@ -20,153 +21,103 @@ Fitur utama mencakup **Back Office (Admin Panel)** untuk manajemen postingan blo
 ---
 
 ## 📂 Tech Stack
+
 - **Framework**: Laravel 11
-- **Database**: MySQL / PostgreSQL
+- **Database**: MySQL / PostgreSQL (direkomendasikan) atau SQLite (default)
 - **Auth**: Laravel Sanctum
-- **WYSIWYG**: Trix / TinyMCE (opsional)
-- **API Docs**: OpenAPI (Swagger)
 
 ---
 
-## 📦 Installation
+## 📦 Instalasi dan Menjalankan Proyek
 
-### 1️⃣ Clone Repository
-```bash
-git clone https://github.com/abdisetiakawan/Simple-Blog-Laravel.git
-cd simple-blog-backend
-````
+### Backend (API)
 
-### 2️⃣ Install Dependencies
+1. **Masuk ke direktori API:**
 
-```bash
-composer install
-```
+   ```bash
+   cd simple-blog-api
+   ```
+2. **Install dependensi Composer:**
 
-### 3️⃣ Setup Environment
+   ```bash
+   composer install
+   ```
+3. **Siapkan file `.env`:**
+   Salin `.env.example` menjadi `.env` dan sesuaikan konfigurasi database Anda.
 
-Salin file `.env.example` menjadi `.env` lalu sesuaikan konfigurasi:
+   ```bash
+   cp .env.example .env
+   ```
 
-```bash
-cp .env.example .env
-```
+   Buka file `.env` dan atur koneksi database Anda (contoh menggunakan MySQL):
 
-Edit `.env`:
+   ```env
+   DB_CONNECTION=mysql
+   DB_HOST=127.0.0.1
+   DB_PORT=3306
+   DB_DATABASE=simple_blog
+   DB_USERNAME=root
+   DB_PASSWORD=
+   ```
+4. **Generate application key:**
 
-```env
-APP_NAME=SimpleBlog
-APP_URL=http://localhost:8000
+   ```bash
+   php artisan key:generate
+   ```
+5. **Jalankan migrasi dan seeder database:**
+   Perintah ini akan membuat tabel yang diperlukan dan mengisi data awal (termasuk akun admin).
 
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=simple_blog
-DB_USERNAME=root
-DB_PASSWORD=
-```
+   ```bash
+   php artisan migrate --seed
+   ```
 
-### 4️⃣ Generate Key
+   Akun admin default yang akan dibuat:
 
-```bash
-php artisan key:generate
-```
+   - **Email:** `admin@codingcollective.com`
+   - **Password:** `password`
+6. **Jalankan server API:**
+   Pastikan server berjalan di `localhost` pada port `8000`.
 
-### 5️⃣ Run Migration & Seeder
+   ```bash
+   php artisan serve --port=8000
+   ```
 
-```bash
-php artisan migrate --seed
-```
+### Frontend (Client)
 
-Seeder akan membuat:
+1. **Buka terminal baru** dan masuk ke direktori client:
 
-* 1 admin user default:
+   ```bash
+   cd simple-blog-client
+   ```
+2. **Install dependensi NPM:**
 
-  * Email: `admin@example.com`
-  * Password: `password`
+   ```bash
+   npm install
+   ```
+3. **Jalankan server development:**
 
-### 6️⃣ Run Server
+   ```bash
+   npm run dev
+   ```
 
-```bash
-php artisan serve
-```
-
-Akses: [http://localhost:8000](http://localhost:8000)
-
----
-
-## 🔗 API Documentation
-
-Dokumentasi API tersedia dalam format **OpenAPI JSON** di:
-
-```
-/apispec.json
-```
-
-Bisa dibuka di:
-
-* [Swagger Editor](https://editor.swagger.io/)
-* [Postman](https://www.postman.com/)
+   Aplikasi frontend akan berjalan di [http://localhost:3000](http://localhost:3000).
 
 ---
 
-## 🗄 Database Schema (ERD)
+## 🔗 Dokumentasi API
 
-ERD dibuat menggunakan [dbdiagram.io](https://dbdiagram.io):
+Anda dapat menjelajahi dan menguji API menggunakan beberapa cara:
 
-```dbml
-Enum user_role {
-  admin
-}
-
-Enum post_status {
-  draft
-  published
-}
-
-Table users {
-  id bigint [pk, increment]
-  name varchar(100)
-  email varchar(150) [unique]
-  password varchar(255)
-  role user_role
-  avatar varchar(255)
-  created_at timestamp
-  updated_at timestamp
-  deleted_at timestamp
-}
-
-Table posts {
-  id bigint [pk, increment]
-  title varchar(200)
-  slug varchar(200) [unique]
-  content text
-  thumbnail varchar(255)
-  status post_status
-  published_at timestamp
-  created_by bigint
-  created_at timestamp
-  updated_at timestamp
-  deleted_at timestamp
-}
-
-Ref: posts.created_by > users.id
-```
+* **Spesifikasi OpenAPI**: Lihat file [`apispec.json`](https://github.com/abdisetiakawan/Simple-Blog-Laravel/blob/main/apispec.json) yang dapat diimpor ke alat seperti [Swagger Editor](https://editor.swagger.io/).
+* **Koleksi Postman**: Impor koleksi kami langsung ke Postman melalui tautan berikut: [Postman Collection](https://abdisetiawan-4530305.postman.co/workspace/My-Workspace~1582fbbb-20be-4d6e-80b3-c6c566c3f915/collection/46764747-20827210-a359-4815-8bf3-e09ab1b606bc?action=share&source=copy-link&creator=46764747).
 
 ---
 
 ## 🧪 Testing
 
-Jalankan unit & feature tests:
-
-```bash
-php artisan test
-```
-
----
-
+Untuk menjalankan cd simple-blog-api
 
 ## 👤 Author
 
 * Nama: **Abdi Setiawan**
 * Email: [bedikadiryt@gmail.com](mailto:bedikadiryt@gmail.com)
-
-
