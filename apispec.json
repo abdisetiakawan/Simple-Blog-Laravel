@@ -1,239 +1,1127 @@
 {
-  "openapi": "3.0.0",
-  "info": {
-    "title": "Simple Blog API",
-    "version": "1.0.0",
-    "description": "API specification for Simple Blog Website with soft delete support."
-  },
-  "servers": [
-    {
-      "url": "https://api.example.com/api",
-      "description": "Production server"
+    "openapi": "3.0.0",
+    "info": {
+        "title": "Simple Blog API",
+        "version": "1.0.0",
+        "description": "Blog API with separate endpoints for public access and admin management.\n\n## Authentication\n- Public endpoints do not require authentication\n- Admin endpoints require Bearer token authentication\n\n## API Categories\n- **Public API**: Accessible by anyone (reading posts)\n- **Admin API**: Requires authentication (managing posts)\n"
     },
-    {
-      "url": "http://localhost:8000/api",
-      "description": "Local development server"
-    }
-  ],
-  "paths": {
-    "/posts": {
-      "get": {
-        "summary": "Get list of published posts",
-        "parameters": [
-          { "in": "query", "name": "search", "schema": { "type": "string" } },
-          { "in": "query", "name": "page", "schema": { "type": "integer" } },
-          { "in": "query", "name": "per_page", "schema": { "type": "integer" } }
-        ],
-        "responses": {
-          "200": {
-            "description": "List of posts",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": {
-                    "data": {
-                      "type": "array",
-                      "items": { "$ref": "#/components/schemas/PostListItem" }
+    "servers": [
+        {
+            "url": "/api"
+        }
+    ],
+    "security": [
+        {
+            "bearerAuth": []
+        }
+    ],
+    "paths": {
+        "/auth/login": {
+            "post": {
+                "tags": [
+                    "Public - Authentication"
+                ],
+                "summary": "Authenticate a user and return a token",
+                "security": [],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": [
+                                    "email",
+                                    "password"
+                                ],
+                                "properties": {
+                                    "email": {
+                                        "type": "string",
+                                        "format": "email",
+                                        "example": "admin@example.com"
+                                    },
+                                    "password": {
+                                        "type": "string",
+                                        "format": "password",
+                                        "example": "password123"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "User logged in successfully.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "User logged in successfully."
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "token": {
+                                                    "type": "string",
+                                                    "example": "1|z1WqZ1PzR6S0f3t9e0W0t6x0y5Y3t0C6k8B5s5A0o7N"
+                                                }
+                                            }
+                                        },
+                                        "errors": {
+                                            "nullable": true,
+                                            "example": null
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     },
-                    "meta": { "$ref": "#/components/schemas/Pagination" }
-                  }
+                    "401": {
+                        "description": "Invalid credentials.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/UnauthorizedResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    }
                 }
-              }
             }
-          }
+        },
+        "/posts": {
+            "get": {
+                "tags": [
+                    "Public - Posts"
+                ],
+                "summary": "Retrieve all published posts with optional search",
+                "security": [],
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "description": "Search posts by title or content",
+                        "schema": {
+                            "type": "string",
+                            "example": "tutorial"
+                        }
+                    },
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Number of posts per page",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 100,
+                            "default": 10,
+                            "example": 10
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Posts retrieved successfully.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Posts retrieved successfully."
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/PublicPost"
+                                            }
+                                        },
+                                        "errors": {
+                                            "nullable": true,
+                                            "example": null
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/posts/{slug}": {
+            "get": {
+                "tags": [
+                    "Public - Posts"
+                ],
+                "summary": "Retrieve a single published post by slug",
+                "security": [],
+                "parameters": [
+                    {
+                        "name": "slug",
+                        "in": "path",
+                        "required": true,
+                        "description": "Post slug identifier",
+                        "schema": {
+                            "type": "string",
+                            "example": "my-first-post"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Post retrieved successfully.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Post retrieved successfully."
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/PublicPostWithUser"
+                                        },
+                                        "errors": {
+                                            "nullable": true,
+                                            "example": null
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Post not found.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/posts": {
+            "get": {
+                "tags": [
+                    "Admin - Posts Management"
+                ],
+                "summary": "Retrieve all posts for admin dashboard (including drafts)",
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Number of posts per page",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 100,
+                            "default": 10,
+                            "example": 15
+                        }
+                    },
+                    {
+                        "name": "status",
+                        "in": "query",
+                        "description": "Filter posts by status",
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "draft",
+                                "published"
+                            ],
+                            "example": "published"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Posts retrieved successfully.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Posts retrieved successfully."
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/AdminPost"
+                                            }
+                                        },
+                                        "errors": {
+                                            "nullable": true,
+                                            "example": null
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedError"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenError"
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "Admin - Posts Management"
+                ],
+                "summary": "Create a new post",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": [
+                                    "title",
+                                    "content",
+                                    "status"
+                                ],
+                                "properties": {
+                                    "title": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 255,
+                                        "example": "My New Blog Post"
+                                    },
+                                    "content": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "example": "This is the content of my new blog post..."
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "draft",
+                                            "published"
+                                        ],
+                                        "example": "draft"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Post created successfully.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Post created successfully."
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/AdminPost"
+                                        },
+                                        "errors": {
+                                            "nullable": true,
+                                            "example": null
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedError"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenError"
+                    },
+                    "422": {
+                        "description": "Validation Error.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/posts/trashed": {
+            "get": {
+                "tags": [
+                    "Admin - Posts Management"
+                ],
+                "summary": "Retrieve all soft-deleted posts",
+                "parameters": [
+                    {
+                        "name": "per_page",
+                        "in": "query",
+                        "description": "Number of posts per page",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "maximum": 100,
+                            "default": 10
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Trashed posts retrieved successfully.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Trashed posts retrieved successfully."
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/AdminPostWithUser"
+                                            }
+                                        },
+                                        "errors": {
+                                            "nullable": true,
+                                            "example": null
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedError"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenError"
+                    }
+                }
+            }
+        },
+        "/admin/posts/{id}": {
+            "get": {
+                "tags": [
+                    "Admin - Posts Management"
+                ],
+                "summary": "Retrieve a post by ID (including drafts and deleted)",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "description": "Post ID",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Post retrieved successfully.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Post retrieved successfully."
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/AdminPostWithUser"
+                                        },
+                                        "errors": {
+                                            "nullable": true,
+                                            "example": null
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedError"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenError"
+                    },
+                    "404": {
+                        "description": "Post not found.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "Admin - Posts Management"
+                ],
+                "summary": "Update an existing post",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "description": "Post ID",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": [
+                                    "title",
+                                    "content",
+                                    "status"
+                                ],
+                                "properties": {
+                                    "title": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "maxLength": 255,
+                                        "example": "Updated Blog Post Title"
+                                    },
+                                    "content": {
+                                        "type": "string",
+                                        "minLength": 1,
+                                        "example": "This is the updated content..."
+                                    },
+                                    "status": {
+                                        "type": "string",
+                                        "enum": [
+                                            "draft",
+                                            "published"
+                                        ],
+                                        "example": "published"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Post updated successfully.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Post updated successfully."
+                                        },
+                                        "data": {
+                                            "$ref": "#/components/schemas/AdminPost"
+                                        },
+                                        "errors": {
+                                            "nullable": true,
+                                            "example": null
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedError"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenError"
+                    },
+                    "404": {
+                        "description": "Post not found.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    },
+                    "422": {
+                        "description": "Validation Error.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ValidationErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "Admin - Posts Management"
+                ],
+                "summary": "Soft-delete a post by ID",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "description": "Post ID",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Post moved to trash successfully.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Post moved to trash successfully."
+                                        },
+                                        "data": {
+                                            "nullable": true,
+                                            "example": null
+                                        },
+                                        "errors": {
+                                            "nullable": true,
+                                            "example": null
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedError"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenError"
+                    },
+                    "404": {
+                        "description": "Post not found.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponse"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/posts/{id}/restore": {
+            "patch": {
+                "tags": [
+                    "Admin - Posts Management"
+                ],
+                "summary": "Restore a soft-deleted post",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "description": "Post ID",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Post restored successfully.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Post restored successfully."
+                                        },
+                                        "data": {
+                                            "nullable": true,
+                                            "example": null
+                                        },
+                                        "errors": {
+                                            "nullable": true,
+                                            "example": null
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedError"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenError"
+                    },
+                    "404": {
+                        "description": "Post not found in trash.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseNotFoundInTrash"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/admin/posts/{id}/force": {
+            "delete": {
+                "tags": [
+                    "Admin - Posts Management"
+                ],
+                "summary": "Permanently delete a soft-deleted post",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "description": "Post ID",
+                        "schema": {
+                            "type": "integer",
+                            "minimum": 1,
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Post permanently deleted.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean",
+                                            "example": true
+                                        },
+                                        "message": {
+                                            "type": "string",
+                                            "example": "Post permanently deleted."
+                                        },
+                                        "data": {
+                                            "nullable": true,
+                                            "example": null
+                                        },
+                                        "errors": {
+                                            "nullable": true,
+                                            "example": null
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/UnauthorizedError"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/ForbiddenError"
+                    },
+                    "404": {
+                        "description": "Post not found in trash.",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/ErrorResponseNotFoundInTrash"
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
-      }
     },
-    "/posts/{slug}": {
-      "get": {
-        "summary": "Get post detail by slug",
-        "parameters": [
-          { "in": "path", "name": "slug", "required": true, "schema": { "type": "string" } }
-        ],
+    "components": {
+        "securitySchemes": {
+            "bearerAuth": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "JWT",
+                "description": "Enter your bearer token in the format **Bearer &lt;token&gt;**"
+            }
+        },
         "responses": {
-          "200": {
-            "description": "Post detail",
-            "content": {
-              "application/json": {
-                "schema": { "$ref": "#/components/schemas/PostDetail" }
-              }
+            "UnauthorizedError": {
+                "description": "Authentication token is missing or invalid",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "$ref": "#/components/schemas/UnauthorizedResponse"
+                        }
+                    }
+                }
+            },
+            "ForbiddenError": {
+                "description": "Access denied - insufficient permissions",
+                "content": {
+                    "application/json": {
+                        "schema": {
+                            "type": "object",
+                            "properties": {
+                                "success": {
+                                    "type": "boolean",
+                                    "example": false
+                                },
+                                "message": {
+                                    "type": "string",
+                                    "example": "Access denied. Admin privileges required."
+                                },
+                                "data": {
+                                    "nullable": true,
+                                    "example": null
+                                },
+                                "errors": {
+                                    "nullable": true,
+                                    "example": null
+                                }
+                            }
+                        }
+                    }
+                }
             }
-          }
-        }
-      }
-    },
-    "/auth/login": {
-      "post": {
-        "summary": "Login as admin",
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
+        },
+        "schemas": {
+            "PublicPost": {
                 "type": "object",
-                "required": ["email", "password"],
+                "description": "Public post data (published posts only)",
                 "properties": {
-                  "email": { "type": "string" },
-                  "password": { "type": "string" }
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "title": {
+                        "type": "string",
+                        "example": "My First Blog Post"
+                    },
+                    "slug": {
+                        "type": "string",
+                        "example": "my-first-blog-post"
+                    },
+                    "content": {
+                        "type": "string",
+                        "example": "This is the content of my first blog post..."
+                    },
+                    "thumbnail": {
+                        "type": "string",
+                        "example": "https://placehold.co/150?text=My+First+Post&font=roboto"
+                    },
+                    "published_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2024-01-15T10:30:00Z"
+                    }
                 }
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Successful login",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "object",
-                  "properties": { "token": { "type": "string" } }
+            },
+            "PublicPostWithUser": {
+                "type": "object",
+                "description": "Public post with author information",
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/PublicPost"
+                    },
+                    {
+                        "type": "object",
+                        "properties": {
+                            "user": {
+                                "type": "object",
+                                "properties": {
+                                    "id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "example": "John Doe"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                ]
+            },
+            "AdminPost": {
+                "type": "object",
+                "description": "Admin post data (includes all statuses and metadata)",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "user_id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "title": {
+                        "type": "string",
+                        "example": "My First Blog Post"
+                    },
+                    "slug": {
+                        "type": "string",
+                        "example": "my-first-blog-post"
+                    },
+                    "content": {
+                        "type": "string",
+                        "example": "This is the content of my first blog post..."
+                    },
+                    "thumbnail": {
+                        "type": "string",
+                        "example": "https://placehold.co/150?text=My+First+Post&font=roboto"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "draft",
+                            "published"
+                        ],
+                        "example": "published"
+                    },
+                    "published_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true,
+                        "example": "2024-01-15T10:30:00Z"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2024-01-15T09:00:00Z"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "example": "2024-01-15T10:30:00Z"
+                    },
+                    "deleted_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true,
+                        "example": null
+                    }
                 }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/admin/posts": {
-      "post": {
-        "summary": "Create a new post",
-        "security": [{ "bearerAuth": [] }],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": { "schema": { "$ref": "#/components/schemas/PostCreate" } }
-          }
-        },
-        "responses": { "201": { "description": "Post created" } }
-      }
-    },
-    "/admin/posts/{id}": {
-      "put": {
-        "summary": "Update an existing post",
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [
-          { "in": "path", "name": "id", "required": true, "schema": { "type": "integer" } }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": { "schema": { "$ref": "#/components/schemas/PostUpdate" } }
-          }
-        },
-        "responses": { "200": { "description": "Post updated" } }
-      },
-      "delete": {
-        "summary": "Soft delete a post",
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [
-          { "in": "path", "name": "id", "required": true, "schema": { "type": "integer" } }
-        ],
-        "responses": { "200": { "description": "Post moved to trash" } }
-      }
-    },
-    "/admin/posts/{id}/restore": {
-      "patch": {
-        "summary": "Restore a soft-deleted post",
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [
-          { "in": "path", "name": "id", "required": true, "schema": { "type": "integer" } }
-        ],
-        "responses": { "200": { "description": "Post restored" } }
-      }
-    },
-    "/admin/posts/trashed": {
-      "get": {
-        "summary": "Get list of trashed posts",
-        "security": [{ "bearerAuth": [] }],
-        "responses": {
-          "200": {
-            "description": "List of trashed posts",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": { "$ref": "#/components/schemas/PostTrashed" }
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/admin/posts/{id}/force": {
-      "delete": {
-        "summary": "Permanently delete a post",
-        "security": [{ "bearerAuth": [] }],
-        "parameters": [
-          { "in": "path", "name": "id", "required": true, "schema": { "type": "integer" } }
-        ],
-        "responses": { "200": { "description": "Post permanently deleted" } }
-      }
-    }
-  },
-  "components": {
-    "securitySchemes": {
-      "bearerAuth": { "type": "http", "scheme": "bearer", "bearerFormat": "JWT" }
-    },
-    "schemas": {
-      "PostListItem": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "integer" },
-          "title": { "type": "string" },
-          "slug": { "type": "string" },
-          "thumbnail": { "type": "string" },
-          "published_at": { "type": "string", "format": "date-time" }
-        }
-      },
-      "PostDetail": {
-        "allOf": [
-          { "$ref": "#/components/schemas/PostListItem" },
-          {
-            "type": "object",
-            "properties": {
-              "content": { "type": "string" },
-              "author": {
+            },
+            "AdminPostWithUser": {
+                "type": "object",
+                "description": "Admin post with author information",
+                "allOf": [
+                    {
+                        "$ref": "#/components/schemas/AdminPost"
+                    },
+                    {
+                        "type": "object",
+                        "properties": {
+                            "user": {
+                                "type": "object",
+                                "properties": {
+                                    "id": {
+                                        "type": "integer",
+                                        "example": 1
+                                    },
+                                    "name": {
+                                        "type": "string",
+                                        "example": "Admin User"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                ]
+            },
+            "ErrorResponse": {
                 "type": "object",
                 "properties": {
-                  "id": { "type": "integer" },
-                  "name": { "type": "string" }
+                    "success": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Post not found."
+                    },
+                    "data": {
+                        "nullable": true,
+                        "example": null
+                    },
+                    "errors": {
+                        "nullable": true,
+                        "example": null
+                    }
                 }
-              }
+            },
+            "UnauthorizedResponse": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Invalid credentials."
+                    },
+                    "data": {
+                        "nullable": true,
+                        "example": null
+                    },
+                    "errors": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "example": [
+                            "Authentication failed"
+                        ]
+                    }
+                }
+            },
+            "ErrorResponseNotFoundInTrash": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Post not found in trash."
+                    },
+                    "data": {
+                        "nullable": true,
+                        "example": null
+                    },
+                    "errors": {
+                        "nullable": true,
+                        "example": null
+                    }
+                }
+            },
+            "ValidationErrorResponse": {
+                "type": "object",
+                "properties": {
+                    "success": {
+                        "type": "boolean",
+                        "example": false
+                    },
+                    "message": {
+                        "type": "string",
+                        "example": "Validation Error"
+                    },
+                    "data": {
+                        "nullable": true,
+                        "example": null
+                    },
+                    "errors": {
+                        "type": "object",
+                        "additionalProperties": {
+                            "type": "array",
+                            "items": {
+                                "type": "string"
+                            }
+                        },
+                        "example": {
+                            "title": [
+                                "The title field is required."
+                            ],
+                            "content": [
+                                "The content field is required."
+                            ]
+                        }
+                    }
+                }
             }
-          }
-        ]
-      },
-      "PostCreate": {
-        "type": "object",
-        "required": ["title", "content", "status"],
-        "properties": {
-          "title": { "type": "string" },
-          "content": { "type": "string" },
-          "thumbnail": { "type": "string" },
-          "status": { "type": "string", "enum": ["draft", "published"] },
-          "published_at": { "type": "string", "format": "date-time" }
         }
-      },
-      "PostUpdate": { "allOf": [{ "$ref": "#/components/schemas/PostCreate" }] },
-      "PostTrashed": {
-        "type": "object",
-        "properties": {
-          "id": { "type": "integer" },
-          "title": { "type": "string" },
-          "deleted_at": { "type": "string", "format": "date-time" }
-        }
-      },
-      "Pagination": {
-        "type": "object",
-        "properties": {
-          "current_page": { "type": "integer" },
-          "per_page": { "type": "integer" },
-          "total": { "type": "integer" }
-        }
-      }
     }
-  }
 }
